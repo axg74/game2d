@@ -1,0 +1,1 @@
+vasmm68k_mot.exe -kick1hunks -Fhunkexe -o C:\Users\alexa\Documents\0Amiga\gamedev\machines\dev\dh0\test.exe C:\Users\alexa\Documents\0Amiga\gamedev\source\main.s

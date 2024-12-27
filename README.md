@@ -1,2 +1,1 @@
-# game2d
-assembly amiga 68k code
+# horizontal tile scrolling for the amiga in assembly language
