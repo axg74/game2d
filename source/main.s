@@ -208,7 +208,6 @@ blit_tiles_right_side:
 
 				move.l	screen_visible,a2
 				add.l	d2,a2
-				add.l	#38,a2
 				add.w	hardscroll_x_offset,a2
 				movem.l	a1/a2,$50(a5)
 				move.w	#PLANECOUNT*TILE_SIZE*64+1,$58(a5)
@@ -216,10 +215,10 @@ blit_tiles_right_side:
 
 				move.l	screen_visible,a2
 				add.l	d2,a2
-				add.l	#38+40,a2
+				add.l	#40,a2
 				add.w	hardscroll_x_offset,a2
 				movem.l	a1/a2,$50(a5)
-			;	move.w	#PLANECOUNT*TILE_SIZE*64+1,$58(a5)
+				move.w	#PLANECOUNT*TILE_SIZE*64+1,$58(a5)
 				waitblit
 
 				add.l	#SCREENWIDTH*TILE_SIZE*PLANECOUNT,d2
@@ -245,7 +244,7 @@ calc_tilepos_table:
 				dbf		d6,.y_loop
 				rts
 
-map_scroll:		move.w	map_x,d0
+map_scroll:		move.w	map_x,d0			; calc softscroll-x value
 				and.w	#15,d0
 				move.w	#15,d2
 				sub.w	d0,d2
