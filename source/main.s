@@ -9,14 +9,15 @@
 ; ... code by axg74 ...
 ; =============================================================================
 
-SCREENWIDTH= 640/8
-SCREENHEIGHT= 256
-PLANECOUNT= 4
-TILESHEET_WIDTH=320
-TILESHEET_HEIGHT=256
-TILE_SIZE=16
-TILEMAP_COLUMNS=20
-TILEMAP_ROWS=13
+SCREENWIDTH			=	640/8
+SCREENHEIGHT		=	256
+PLANECOUNT			= 	4
+TILESHEET_WIDTH		=	320
+TILESHEET_HEIGHT	=	256
+TILE_SIZE			=	16
+TILEMAP_COLUMNS		=	20
+TILEMAP_ROWS		=	13
+MAX_TILEMAP_WIDTH	=	320
 
 waitblit:	macro
 .\@
@@ -47,7 +48,7 @@ start:
 ; init hardware
 ; =============================================================================
 init:	
-	lea		$dff000,a5
+	lea 	$dff000,a5
 	move.w	#$8000,d1
 	move.w	$2(a5),d0
 	or.w	d1,d0
@@ -172,7 +173,7 @@ draw_tile_screen:
 	rts
 			
 ; =============================================================================
-; blit tiles on the right on the screen
+; blit tiles rows on both screens
 ; =============================================================================	
 blit_tiles_right_side:
 	waitblit
@@ -212,8 +213,8 @@ blit_tiles_right_side:
 	move.w	#PLANECOUNT*TILE_SIZE*64+1,$58(a5)
 	waitblit
 
-	add.l	#SCREENWIDTH*TILE_SIZE*PLANECOUNT,d2
-	add.l	#40,a3
+	add.l	#SCREENWIDTH*TILE_SIZE*PLANECOUNT,d2		; next row in bitplane
+	add.l	#40,a3										; next row in tile-map-data
 	dbf		d7,.y_loop
 	rts
 
@@ -235,6 +236,9 @@ calc_tilepos_table:
 	dbf		d6,.y_loop
 	rts
 
+; =============================================================================
+; calculate soft-scroll-x and hard-scroll-x from the map-x-position
+; =============================================================================	
 map_scroll:		
 	move.w	map_x,d0			; calc softscroll-x value
 	and.w	#15,d0
@@ -257,7 +261,7 @@ map_scroll:
 	move.w	d0,hardscroll_x_offset
 
 	addq.w	#1,map_x
-	cmp.w	#319,map_x
+	cmp.w	#MAX_TILEMAP_WIDTH-1,map_x
 	ble		.no
 	move.w	#0,map_x
 .no:
@@ -280,18 +284,18 @@ vb_irq_handler:
 ; =============================================================================
 ; variables, data etc.
 ; =============================================================================	
-map_x: dc.w	0
-map_y: dc.w	0
-map_width: dc.w	20
-map_height:	dc.w	13
-hardscroll_x_offset: dc.w	0
-softscroll_x_value:	dc.w	$0000
-screen_visible: dc.l	0
-screen_backbuffer: dc.l	0
+map_x: 					dc.w	0
+map_y: 					dc.w	0
+map_width: 				dc.w	20
+map_height:				dc.w	13
+hardscroll_x_offset: 	dc.w	0
+softscroll_x_value:		dc.w	$0000
+screen_visible: 		dc.l	0
+screen_backbuffer: 		dc.l	0
 
-irqvec6_save:	dc.l	0			
-dmacon_save: dc.w	0
-intena_save: dc.w	0
+irqvec6_save:			dc.l	0			
+dmacon_save: 			dc.w	0
+intena_save: 			dc.w	0
 
 tilemap_data:	
 	dc.w	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
@@ -308,20 +312,17 @@ tilemap_data:
 	dc.w	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 	dc.w	3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3
 
-gfxname:		
-	dc.b	"graphics.library",0
-	even
+gfxname:				dc.b	"graphics.library",0
+						even
 
 ; #	offset for each tile in the tilesheet
-tileoffset_tab:
-	dcb.l	20*16,0
+tileoffset_tab:			dcb.l	20*16,0
 
-	section data,data_c		
+			section data,data_c		
 		
-copperlist:		
-				dc.w	$008e,$2981,$0090,$29c1
-				dc.w	$0092,$0038,$0094,$00d0
-				
+copperlist:	dc.w	$008e,$2991,$0090,$29b1
+			dc.w	$0092,$0030,$0094,$00d0
+
 spr0:		dc.w	$0120,$0000,$0122,$0000
 spr1:		dc.w	$0124,$0000,$0126,$0000
 spr2:		dc.w	$0128,$0000,$012a,$0000
@@ -331,34 +332,36 @@ spr5:		dc.w	$0134,$0000,$0136,$0000
 spr6:		dc.w	$0138,$0000,$013a,$0000
 spr7:		dc.w	$013c,$0000,$013e,$0000
 				
-bitplanes:
-				dc.w	$00e0,$0000,$00e2,$0000
-				dc.w	$00e4,$0000,$00e6,$0000
-				dc.w	$00e8,$0000,$00ea,$0000
-				dc.w	$00ec,$0000,$00ee,$0000
-				dc.w	$00f0,$0000,$00f2,$0000
+bitplanes:	dc.w	$00e0,$0000,$00e2,$0000
+			dc.w	$00e4,$0000,$00e6,$0000
+			dc.w	$00e8,$0000,$00ea,$0000
+			dc.w	$00ec,$0000,$00ee,$0000
+			dc.w	$00f0,$0000,$00f2,$0000
 
-				dc.w	$0100,$4200
-bplcon1:dc.w	$0102,$0000
-				dc.w	$0104,$0000,$0106,$0000
-				dc.w	$0108,280,$010a,280
+			dc.w	$0100,$4200
+bplcon1:	dc.w	$0102,$0000
+			dc.w	$0104,$0000,$0106,$0000
 
-colors:
-				dc.w	$0180,$0fff,$0182,$0000,$0184,$0000,$0186,$0000,$0188,$0000
-				dc.w	$018a,$0000,$018c,$0000,$018e,$0000,$0190,$0000,$0192,$0000
-				dc.w	$0194,$0000,$0196,$0000,$0198,$0000,$019a,$0000,$019c,$0000
-				dc.w	$019e,$0000
-				dc.w	$01a0,$0000,$01a2,$0000,$01a4,$0000,$01a6,$0000,$01a8,$00000
-				dc.w	$01aa,$0000,$01ac,$0000,$01ae,$0000,$01b0,$0000,$01b2,$00000
-				dc.w	$01b4,$0000,$01b6,$0000,$01b8,$0000,$01ba,$0000,$01bc,$00000
-				dc.w	$01be,$00000
-				dc.w	$ffff,$fffe
+; modulo calculation: ((80 * 3) + 40) - 2
+			dc.w	$0108,278,$010a,278
+
+colors:		dc.w	$0180,$0fff,$0182,$0000,$0184,$0000,$0186,$0000,$0188,$0000
+			dc.w	$018a,$0000,$018c,$0000,$018e,$0000,$0190,$0000,$0192,$0000
+			dc.w	$0194,$0000,$0196,$0000,$0198,$0000,$019a,$0000,$019c,$0000
+			dc.w	$019e,$0000
+			dc.w	$01a0,$0000,$01a2,$0000,$01a4,$0000,$01a6,$0000,$01a8,$00000
+			dc.w	$01aa,$0000,$01ac,$0000,$01ae,$0000,$01b0,$0000,$01b2,$00000
+			dc.w	$01b4,$0000,$01b6,$0000,$01b8,$0000,$01ba,$0000,$01bc,$00000
+			dc.w	$01be,$00000
+			dc.w	$ffff,$fffe
 				
 ; CHIP-Data like graphics, sounds, music
-tile_data:		incbin	"../data/gfx/tiles.rawblit"
-test_screen:	incbin	"../data/gfx/test_screen.rawblit"
+
+tile_data:	incbin	"../data/gfx/tiles.rawblit"
+test_screen:incbin	"../data/gfx/test_screen.rawblit"
 
 ; preallocated screen memory
-	section screen_ram,bss_c
+			section screen_ram,bss_c
+
 screen1: ds.b	SCREENWIDTH*SCREENHEIGHT*PLANECOUNT
 screen2: ds.b	SCREENWIDTH*SCREENHEIGHT*PLANECOUNT
