@@ -12,15 +12,15 @@
 ; =============================================================================
 ; constants
 ; =============================================================================
-SCREENWIDTH			= 640/8
-SCREENHEIGHT		= 256
-PLANECOUNT			= 4
+SCREENWIDTH		= 640/8
+SCREENHEIGHT	= 256
+PLANECOUNT		= 4
 
-TILESHEET_WIDTH		= 320
-TILESHEET_HEIGHT	= 256
-TILE_SIZE			= 16
-TILEMAP_COLUMNS		= 20
-TILEMAP_ROWS		= 13
+TILESHEET_WIDTH	= 320
+TILESHEET_HEIGHT= 256
+TILE_SIZE		= 16
+TILEMAP_COLUMNS	= 20
+TILEMAP_ROWS	= 13
 
 ; =============================================================================
 ; macros
