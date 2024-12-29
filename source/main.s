@@ -7,7 +7,11 @@
 ; * todo ...
 ; * ...
 ; ... code by axg74 ...
+;
+; useful internet resources:
+; https://codetapper.com/amiga/diary-of-a-game/menace/part-2-scrolling/
 ; =============================================================================
+		jmp			start
 
 SCREENWIDTH			=	640/8
 SCREENHEIGHT		=	256
@@ -25,17 +29,35 @@ waitblit:	macro
 		bne.s	.\@
 		endm
 
+; =============================================================================
+; other sources
+; =============================================================================
+
+		include	"./player.s"
+
+; =============================================================================
+; game starts here
+; =============================================================================
 start:	
 	bsr		calc_tilepos_table
+	
 	bsr		init	
+	bsr		init_player
+
+	bsr		draw_tile_screen
+	bsr		swap_screens
+	bsr		draw_tile_screen
 
 .loop:			
 	cmp.b	#$ff,6(a5)
 	bne.s	.loop
 
+	bsr		check_player_joystick
+	bsr		set_player_sprite
+
 	bsr		blit_tiles_right_side
 	bsr		map_scroll
-;	bsr		swap_screens
+	bsr		swap_screens
 	bsr		set_screen_planes
 
 	btst	#6,$bfe001
@@ -79,7 +101,7 @@ init:
 	addq.l	#4,a0
 	dbf		d7,.set_color_values
 				
-	move.w	#$83f0,$96(a5)
+	move.w	#%1000001111101111,$96(a5)
 	move.l	#copperlist,$80(a5)
 	move.w	#0,$88(a5)
 
@@ -198,8 +220,23 @@ blit_tiles_right_side:
 	lea		tileoffset_tab,a4							; get the correct tile-offset for the
 	add.l	(a4,d3),a1									; source
 
+	move.l	screen_backbuffer,a2
+	add.l	d2,a2
+	add.w	hardscroll_x_offset,a2
+	movem.l	a1/a2,$50(a5)
+	move.w	#PLANECOUNT*TILE_SIZE*64+1,$58(a5)
+	waitblit
+
 	move.l	screen_visible,a2
 	add.l	d2,a2
+	add.w	hardscroll_x_offset,a2
+	movem.l	a1/a2,$50(a5)
+	move.w	#PLANECOUNT*TILE_SIZE*64+1,$58(a5)
+	waitblit
+
+	move.l	screen_backbuffer,a2
+	add.l	d2,a2
+	add.l	#40,a2
 	add.w	hardscroll_x_offset,a2
 	movem.l	a1/a2,$50(a5)
 	move.w	#PLANECOUNT*TILE_SIZE*64+1,$58(a5)
@@ -239,7 +276,11 @@ calc_tilepos_table:
 ; =============================================================================
 ; calculate soft-scroll-x and hard-scroll-x from the map-x-position
 ; =============================================================================	
-map_scroll:		
+map_scroll:	
+	subq.w	#1,scroll_delay
+	bpl.s	.no
+	move.w	#0,scroll_delay
+
 	move.w	map_x,d0			; calc softscroll-x value
 	and.w	#15,d0
 	move.w	#15,d2
@@ -282,16 +323,52 @@ vb_irq_handler:
 	rte
 
 ; =============================================================================
+; set sprite position
+; =============================================================================
+; a0 = sprite-data
+; d0 = x-pos.
+; d1 = y-pos.
+; d2 = sprite-height
+set_sprite_position:
+	add.w	#$91,d0
+	add.w	#$29,d1
+	clr.l	0(a0)					; clear sprite controll words
+	move.b	d1,0(a0)				; vertical start position of the sprite
+	btst	#0,d0
+	beq.s	.no_h0
+	bset	#0,3(a0)				; set h0
+.no_h0:
+	btst	#8,d1
+	beq.s	.no_e8
+	bset	#2,3(a0)				; set e8
+.no_e8:
+	lsr.w	#1,d0					; bits H8-H1
+	move.b	d0,1(a0)				; first controll-word horizontal position
+	add.w	d2,d1
+	addq.w	#1,d1
+	move.b	d1,2(a0)				; second controll-word vertical end-position
+	btst	#8,d1
+	beq.s	.no_l8
+	bset	#1,3(a0)				; set l8
+.no_l8:
+	rts
+
+; =============================================================================
 ; variables, data etc.
 ; =============================================================================	
 map_x: 					dc.w	0
 map_y: 					dc.w	0
 map_width: 				dc.w	20
 map_height:				dc.w	13
+scroll_delay:			dc.w	0
 hardscroll_x_offset: 	dc.w	0
 softscroll_x_value:		dc.w	$0000
 screen_visible: 		dc.l	0
 screen_backbuffer: 		dc.l	0
+
+player_x:				dc.w	0
+player_y:				dc.w	0
+player_speed:			dc.w	2
 
 irqvec6_save:			dc.l	0			
 dmacon_save: 			dc.w	0
@@ -340,22 +417,84 @@ bitplanes:	dc.w	$00e0,$0000,$00e2,$0000
 
 			dc.w	$0100,$4200
 bplcon1:	dc.w	$0102,$0000
-			dc.w	$0104,$0000,$0106,$0000
+			dc.w	$0104,%0000000000111111
+			dc.w	$0106,$0000
 
 ; modulo calculation: ((80 * 3) + 40) - 2
 			dc.w	$0108,278,$010a,278
 
+; background colors
 colors:		dc.w	$0180,$0fff,$0182,$0000,$0184,$0000,$0186,$0000,$0188,$0000
 			dc.w	$018a,$0000,$018c,$0000,$018e,$0000,$0190,$0000,$0192,$0000
 			dc.w	$0194,$0000,$0196,$0000,$0198,$0000,$019a,$0000,$019c,$0000
 			dc.w	$019e,$0000
-			dc.w	$01a0,$0000,$01a2,$0000,$01a4,$0000,$01a6,$0000,$01a8,$00000
+
+; sprite colors
+			dc.w	$01a0,$0000,$01a2,$00f0,$01a4,$0f00,$01a6,$000f,$01a8,$00000
 			dc.w	$01aa,$0000,$01ac,$0000,$01ae,$0000,$01b0,$0000,$01b2,$00000
 			dc.w	$01b4,$0000,$01b6,$0000,$01b8,$0000,$01ba,$0000,$01bc,$00000
 			dc.w	$01be,$00000
+
+; screen start
+			dc.w	$390f,$fffe
+
+; screen end
+			dc.w	$f90f,$fffe,$0100,$0200
 			dc.w	$ffff,$fffe
 				
 ; CHIP-Data like graphics, sounds, music
+
+; normal player shot
+shot1_sprite_data:
+			dc.w	$0000,$0000
+			dc.w	$00FE,$00C2
+			dc.w	$07D3,$062D
+			dc.w	$3289,$2D76
+			dc.w	$C849,$B7B6
+			dc.w	$3289,$2D76
+			dc.w	$07D3,$062D
+			dc.w	$00FE,$00C2
+			dc.w	$0000,$0000
+
+player_sprite_data_left:
+			dc.w	$0000,$0000
+			dc.w	$ffff,$0000
+			dc.w	$ffff,$0000
+			dc.w	$ffff,$0000
+			dc.w	$ffff,$0000
+			dc.w	$ffff,$0000
+			dc.w	$ffff,$0000
+			dc.w	$ffff,$0000
+			dc.w	$ffff,$0000
+			dc.w	$ffff,$0000
+			dc.w	$ffff,$0000
+			dc.w	$ffff,$0000
+			dc.w	$ffff,$0000
+			dc.w	$ffff,$0000
+			dc.w	$ffff,$0000
+			dc.w	$ffff,$0000
+			dc.w	$ffff,$0000
+			dc.w	$0000,$0000
+
+player_sprite_data_right:
+			dc.w	$0000,$0000
+			dc.w	$0000,$ffff
+			dc.w	$0000,$ffff
+			dc.w	$0000,$ffff
+			dc.w	$0000,$ffff
+			dc.w	$0000,$ffff
+			dc.w	$0000,$ffff
+			dc.w	$0000,$ffff
+			dc.w	$0000,$ffff
+			dc.w	$0000,$ffff
+			dc.w	$0000,$ffff
+			dc.w	$0000,$ffff
+			dc.w	$0000,$ffff
+			dc.w	$0000,$ffff
+			dc.w	$0000,$ffff
+			dc.w	$0000,$ffff
+			dc.w	$0000,$ffff
+			dc.w	$0000,$0000
 
 tile_data:	incbin	"../data/gfx/tiles.rawblit"
 test_screen:incbin	"../data/gfx/test_screen.rawblit"
