@@ -51,6 +51,22 @@ check_player_joystick:
 	add.w	d0,d1
 	add.w	d0,d2
 .not_right_down:
+	cmp.w	#1,d1
+	bge.s	.clip_x1
+	moveq	#1,d1
+.clip_x1:
+	cmp.w	#1,d2
+	bge.s	.clip_y1
+	moveq	#1,d2
+.clip_y1:
+	cmp.w	#320-32-36,d1
+	ble.s	.clip_x2
+	move.w	#320-32-36,d1
+.clip_x2:
+	cmp.w	#208-16,d2
+	ble.s	.clip_y2
+	move.w	#208-16,d2
+.clip_y2:
 	move.w	d1,player_x
 	move.w	d2,player_y
 	rts
