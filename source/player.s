@@ -4,6 +4,7 @@
 init_player:
 	move.w	#80,player_x
 	move.w	#96,player_y
+	move.w	#2,player_speed
 	rts
 
 ; =============================================================================
