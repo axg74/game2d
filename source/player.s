@@ -1,3 +1,5 @@
+; some routines for the player-sprite
+
 ; =============================================================================
 ; init player sprites
 ; =============================================================================
@@ -16,6 +18,7 @@ check_player_joystick:
 	move.w	player_x,d1
 	move.w	player_y,d2
 
+; todo: test another method for joystick handling to simplify things!
 	cmp.w	#$0003,$c(a5)
 	bne.s	.not_right
 	add.w	d0,d1
