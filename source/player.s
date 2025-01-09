@@ -1,4 +1,5 @@
 ; some routines for the player-sprite
+; another comment for testing
 
 ; =============================================================================
 ; init player sprites
